@@ -10,11 +10,6 @@ import (
 )
 
 func cleanup(uhh *cli.Context) error {
-	fmt.Println("boooooom!!!!!!")
-
-	// if user == "" {
-	// }
-
 	// fmt.Printf("args: %q\n", uhh.Args().Get(0))
 	ip := uhh.String("ip")
 	user := uhh.String("user")
@@ -66,9 +61,6 @@ func cleanup(uhh *cli.Context) error {
 
 func main() {
 	// lib.Greet()
-	// var ip string
-	// var user string
-	// var password string
 
 	//(&cli.App{}).Run(os.Args)
 	app := &cli.App{
@@ -79,20 +71,17 @@ func main() {
 				Name:    "ip",
 				Aliases: []string{"i"},
 				Usage:   "IP Address (or fqdn) of CloudVision",
-				// Destination: &ip,
 			},
 			&cli.StringFlag{
 				Name:    "user",
 				Aliases: []string{"u"},
 				Usage:   "Username for CloudVision",
 				// Value:       "notset",
-				// Destination: &user,
 			},
 			&cli.StringFlag{
 				Name:    "password",
 				Aliases: []string{"p"},
 				Usage:   "Password for CloudVision",
-				// Destination: &password,
 			},
 		},
 		Commands: []*cli.Command{
@@ -106,5 +95,5 @@ func main() {
 	if err := app.Run(os.Args); err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("yesssssss")
+	fmt.Println("Done.")
 }
