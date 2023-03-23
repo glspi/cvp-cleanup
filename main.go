@@ -2,7 +2,9 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"strings"
@@ -56,6 +58,27 @@ func cleanup(c *cli.Context) error {
 	}
 
 	fmt.Println("Done cleaning generated configlets.")
+	return nil
+}
+
+// Export ConfigletBuilder
+func export(c *cli.Context) error {
+	cvpClient := c.App.Metadata["client"].(*client.CvpClient)
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Print("Builder Name: ")
+	response, err := reader.ReadString('\n')
+	if err != nil {
+		log.Fatal(err)
+	}
+	response = strings.TrimSpace(response)
+	builder, err := cvpClient.API.GetConfigletBuilderByName(response)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(builder)
+	fout, _ := json.MarshalIndent(builder, "", " ")
+	_ = ioutil.WriteFile("test.json", fout, 0644)
+
 	return nil
 }
 
@@ -122,6 +145,12 @@ func main() {
 				Name:   "cleanup",
 				Usage:  "Cleanup unused configlets in CloudVision",
 				Action: cleanup,
+			},
+			{
+				Before: login,
+				Name:   "export",
+				Usage:  "Export ConfigletBuilder",
+				Action: export,
 			},
 		},
 	}
