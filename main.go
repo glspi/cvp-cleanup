@@ -1,65 +1,66 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/urfave/cli/v2"
 	"gopkg.in/aristanetworks/go-cvprac.v2/client"
 )
 
+// Cleanup Generated Configlets
 func cleanup(c *cli.Context) error {
-	// fmt.Printf("args: %q\n", uhh.Args().Get(0))
-	// ip := uhh.String("ip")
-	// user := uhh.String("user")
-	// password := uhh.String("password")
-
-	// if ip == "" {
-	// 	fmt.Println("YOU NEED AN IP ADDRESS!")
-	// 	os.Exit(1)
-	// }
-	// if user == "" {
-	// 	fmt.Println("YOU NEED A USERNAME!")
-	// 	os.Exit(1)
-	// }
-	// if password == "" {
-	// 	fmt.Println("YOU NEED A PASSWORD!")
-	// 	os.Exit(1)
-	// }
-	// name := "what is this"
-	// if uhh.NArg() > 0 {
-	// 	name = uhh.Args().Get(1)
-	// }
-	// if uhh.String("user") == "spanish" {
-	// 	fmt.Println("Hola", name)
-	// } else {
-	// 	fmt.Println("Hello", name)
-	// }
-
-	// cvpClient := c.Context.Value("client")
-	fmt.Println("Grabbing Configlets") //, c.Context.Value("client").API.GetCvpInfo())
+	fmt.Println("Grabbing Configlets")
 	cvpClient := c.App.Metadata["client"].(*client.CvpClient)
-	fmt.Println(cvpClient.API.GetCvpInfo())
+	reader := bufio.NewReader(os.Stdin)
 
-	lets, err := cvpClient.API.GetConfigletByName("test1")
+	lets, err := cvpClient.API.GetConfiglets()
 	if err != nil {
 		log.Fatalf("ERROR: %s", err)
 	}
-	fmt.Println(lets.Config)
 
-	// data, err := cvpClient.API.GetCvpInfo()
-	// if err != nil {
-	// 	log.Fatalf("ERROR: %s", err)
-	// }
-	// fmt.Printf("Data: %v\n", data)
+	for _, let := range lets {
+		if let.ContainerCount != 0 && let.NetElementCount != 0 {
+			continue
+		}
+		if let.Type != "Generated" {
+			continue
+		}
+		// Confirm with user before deleting, unless noconfirm set
+		for {
+			if c.Bool("noconfirm") == true {
+				cvpClient.API.DeleteConfiglet(let.Name, let.Key)
+				fmt.Printf("Deleted %s!\n", let.Name)
+				break
+			} else {
+				fmt.Printf("Delete %s ? (y/n): ", let.Name)
+				response, err := reader.ReadString('\n')
+				if err != nil {
+					log.Fatal(err)
+				}
+				response = strings.TrimSpace(response)
+				response = strings.ToLower(response)
 
-	// bb := uhh.Context.Value("loggedin")
-	// fmt.Println("did it again", bb)
+				if response == "y" || response == "yes" {
+					cvpClient.API.DeleteConfiglet(let.Name, let.Key)
+					fmt.Printf("Deleted %s!\n", let.Name)
+					break
+				} else if response == "n" || response == "no" {
+					fmt.Println("k then.")
+					break
+				}
+			}
+		}
+	}
 
+	fmt.Println("Done cleaning generated configlets.")
 	return nil
 }
 
+// Login to CVP
 func login(c *cli.Context) error {
 	ip := c.String("ip")
 	user := c.String("user")
@@ -78,16 +79,18 @@ func login(c *cli.Context) error {
 	}
 
 	fmt.Println("Logged in.")
-
+	cvpinfo, err := cvpClient.API.GetCvpInfo()
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("CVP Version: %s\n", cvpinfo.Version)
 	c.App.Metadata["client"] = cvpClient
 
 	return nil
 }
 
+// CLI Options
 func main() {
-	// lib.Greet()
-
-	//(&cli.App{}).Run(os.Args)
 	app := &cli.App{
 		Name:  "cvp-cleanup",
 		Usage: "CVP Configlet Cleanupper - Usage Instructions:",
@@ -110,10 +113,14 @@ func main() {
 				Usage:    "Password for CloudVision",
 				Required: true,
 			},
+			&cli.BoolFlag{
+				Name:  "noconfirm",
+				Usage: "Do not prompt for configlet deletions",
+			},
 		},
-		Before: login,
 		Commands: []*cli.Command{
 			{
+				Before: login,
 				Name:   "cleanup",
 				Usage:  "Cleanup unused configlets in CloudVision",
 				Action: cleanup,
@@ -123,5 +130,4 @@ func main() {
 	if err := app.Run(os.Args); err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("Done.")
 }
