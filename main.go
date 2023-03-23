@@ -30,12 +30,11 @@ func cleanup(c *cli.Context) error {
 			continue
 		}
 		// Confirm with user before deleting, unless noconfirm set
-		for {
-			if c.Bool("noconfirm") == true {
-				cvpClient.API.DeleteConfiglet(let.Name, let.Key)
-				fmt.Printf("Deleted %s!\n", let.Name)
-				break
-			} else {
+		if c.Bool("noconfirm") == true {
+			cvpClient.API.DeleteConfiglet(let.Name, let.Key)
+			fmt.Printf("Deleted %s!\n", let.Name)
+		} else {
+			for {
 				fmt.Printf("Delete %s ? (y/n): ", let.Name)
 				response, err := reader.ReadString('\n')
 				if err != nil {
@@ -65,7 +64,6 @@ func login(c *cli.Context) error {
 	ip := c.String("ip")
 	user := c.String("user")
 	password := c.String("password")
-	fmt.Println(ip, user, password)
 
 	hosts := []string{ip}
 	cvpClient, _ := client.NewCvpClient(
